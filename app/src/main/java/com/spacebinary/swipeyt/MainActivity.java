@@ -9,11 +9,17 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.KeyEvent;
+import android.view.View;
+import android.webkit.WebView;
 import android.widget.Toast;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.spacebinary.swipeyt.adapters.DownloadsListAdapter;
 import com.spacebinary.swipeyt.interfaces.DownloadServiceInterface;
 import com.spacebinary.swipeyt.services.DownloadService;
+import com.spacebinary.swipeyt.ui.home.HomeFragment;
+import com.tonyodev.fetch2.Fetch;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -22,9 +28,10 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
-public class MainActivity extends AppCompatActivity implements DownloadServiceInterface {
+public class MainActivity extends AppCompatActivity implements DownloadServiceInterface, HomeFragment.HomeInterface {
 
     protected DownloadService downloadService;
+    private WebView YTWebView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,10 +66,20 @@ public class MainActivity extends AppCompatActivity implements DownloadServiceIn
     };
 
     @Override
-    public void extractString(String YTUrl) {
+    public void extractString(String YTUrl, String YTTitle) {
         if(isStoragePermissionGranted()) {
-            downloadService.extractString(YTUrl);
+            downloadService.extractString(YTUrl, YTTitle);
         }
+    }
+
+    @Override
+    public Fetch getFetchInstance() {
+        return downloadService.getFetchInstance();
+    }
+
+    @Override
+    public DownloadsListAdapter getDownloadsListAdapter() {
+        return downloadService.getDownloadsListAdapter();
     }
 
     public  boolean isStoragePermissionGranted() {
@@ -89,8 +106,21 @@ public class MainActivity extends AppCompatActivity implements DownloadServiceIn
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
             Log.v("PERMISSSIONS","Permission: "+permissions[0]+ "was "+grantResults[0]);
-            //resume tasks needing this permission
+            downloadService.extractString(YTWebView.getUrl(), YTWebView.getTitle());
         }
     }
+
+    public void setWebView(WebView webView) {
+        YTWebView = webView;
+    }
+
+//    @Override
+//    public boolean onKey(View v, int keyCode, KeyEvent event) {
+//        if( keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP && YTWebView.canGoBack()) {
+//            YTWebView.goBack();
+//            return true;
+//        }
+//        return false;
+//    }
 
 }

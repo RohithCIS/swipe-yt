@@ -8,8 +8,10 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 import android.util.SparseArray;
+import android.webkit.WebView;
 import android.widget.Toast;
 
+import com.spacebinary.swipeyt.adapters.DownloadsListAdapter;
 import com.tonyodev.fetch2.Download;
 import com.tonyodev.fetch2.Error;
 import com.tonyodev.fetch2.Fetch;
@@ -18,12 +20,16 @@ import com.tonyodev.fetch2.FetchListener;
 import com.tonyodev.fetch2.NetworkType;
 import com.tonyodev.fetch2.Priority;
 import com.tonyodev.fetch2.Request;
+import com.tonyodev.fetch2.Status;
 import com.tonyodev.fetch2core.DownloadBlock;
+import com.tonyodev.fetch2core.Func;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import at.huber.youtubeExtractor.VideoMeta;
@@ -37,6 +43,8 @@ public class DownloadService extends Service {
     public String YTDownloadURL;
     public String YTDownloadName;
     public Fetch fetch;
+    public ArrayList<Download> downloadsList = new ArrayList<>();
+    public DownloadsListAdapter downloadsListAdapter = new DownloadsListAdapter(this, downloadsList);
 
     public DownloadService() {
     }
@@ -81,12 +89,26 @@ public class DownloadService extends Service {
 
             @Override
             public void onStarted(@NotNull Download download, @NotNull List<? extends DownloadBlock> list, int i) {
-
+                Func<List<Download>> downloads = new Func<List<Download>>() {
+                    @Override
+                    public void call(@NotNull List<Download> result) {
+                        downloadsList = new ArrayList<>();
+                        downloadsList.addAll(result);
+//                        downloadsListAdapter.notifyDataSetChanged();
+                        downloadsListAdapter = new DownloadsListAdapter(DownloadService.this, downloadsList);
+                    }
+                };
+                fetch.getDownloadsWithStatus(Status.DOWNLOADING, downloads);
             }
 
             @Override
             public void onProgress(@NotNull Download download, long l, long l1) {
-
+                for (int position = 0; position < downloadsList.size(); position++) {
+                    if (downloadsList.get(position).getId() == download.getId()) {
+                        downloadsList.set(position, download);
+                    }
+                }
+                downloadsListAdapter = new DownloadsListAdapter(DownloadService.this, downloadsList);
             }
 
             @Override
@@ -129,7 +151,7 @@ public class DownloadService extends Service {
         return START_STICKY;
     }
 
-    public void extractString(String YTUrl) {
+    public void extractString(String YTUrl, String YTTitle) {
         new YouTubeExtractor(DownloadService.this) {
             @Override
             public void onExtractionComplete(SparseArray<YtFile> ytFiles, VideoMeta vMeta) {
@@ -137,14 +159,14 @@ public class DownloadService extends Service {
                     int itag = 22;
                     YTDownloadURL = ytFiles.get(itag).getUrl();
                     Log.d("YTSTRING", YTDownloadURL);
-                    startDownload();
+                    startDownload(YTTitle);
                 }
             }
         }.extract(YTUrl, true, true);
     }
 
-    public void startDownload() {
-        String file = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).toString() + "/" + YTDownloadURL.hashCode() + ".mp4";
+    public void startDownload(String YTTitle) {
+        String file = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS).toString() + "/" + YTTitle + ".mp4";
         final Request request = new Request(YTDownloadURL, file);
 
         request.setPriority(Priority.HIGH);
@@ -157,5 +179,13 @@ public class DownloadService extends Service {
         }, error -> {
             Toast.makeText(this, "Unable to Download!", Toast.LENGTH_SHORT).show();
         });
+    }
+
+    public Fetch getFetchInstance() {
+        return fetch;
+    }
+
+    public DownloadsListAdapter getDownloadsListAdapter() {
+        return downloadsListAdapter;
     }
 }

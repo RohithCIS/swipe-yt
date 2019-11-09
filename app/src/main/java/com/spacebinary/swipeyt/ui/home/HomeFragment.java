@@ -23,16 +23,16 @@ import com.spacebinary.swipeyt.interfaces.DownloadServiceInterface;
 public class HomeFragment extends Fragment {
 
     private DownloadServiceInterface downloadServiceInterface;
-
-    private HomeViewModel homeViewModel;
-
+    private HomeInterface homeInterface;
     private WebView YTWebView;
+    private HomeViewModel homeViewModel;
 
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
         try {
             downloadServiceInterface = (DownloadServiceInterface) context;
+            homeInterface = (HomeInterface) context;
         } catch (ClassCastException e) {
             // Error, class doesn't implement the interface
         }
@@ -52,26 +52,21 @@ public class HomeFragment extends Fragment {
 
         FloatingActionButton fab = root.findViewById(R.id.download_fab);
         fab.setOnClickListener((View v) -> {
-            Log.d("YTSTRING", YTWebView.getUrl());
-            downloadServiceInterface.extractString(YTWebView.getUrl());
+            homeInterface.setWebView(YTWebView);
+            downloadServiceInterface.extractString(YTWebView.getUrl(), YTWebView.getTitle());
         });
+
 
         YTWebView = root.findViewById(R.id.YTWebView);
         YTWebView.getSettings().setJavaScriptEnabled(true);
         YTWebView.loadUrl("https://m.youtube.com");
 
-        root.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View v, int keyCode, KeyEvent event) {
-                if( keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_UP && YTWebView.canGoBack()) {
-                    YTWebView.goBack();
-                    return true;
-                }
-                return false;
-            }
-        });
 
         return root;
+    }
+
+    public interface HomeInterface {
+        void setWebView(WebView v);
     }
 
 }
